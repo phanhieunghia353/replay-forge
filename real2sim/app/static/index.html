@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>real2sim</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="mode-simple">
+  <!-- Layout (docs/thiet-ke-giao-dien.md): top bar / viewer + timeline / inspector; the dock under both
+       only in the technical mode. Elements with class "tech" show only in that mode, "simple" only in the other. -->
+  <header class="topbar">
+    <div class="brand"><b>real2sim</b><span>cảnh thật → kịch bản mô phỏng</span></div>
+    <div class="picker">
+      <select id="source" aria-label="Nguồn dữ liệu"></select>
+      <select id="scene" aria-label="Cảnh"></select>
+      <button id="open-data" class="ghost" title="Thêm dữ liệu, xử lý cảnh">Dữ liệu…</button>
+    </div>
+    <ol class="steps simple" aria-label="Các bước">
+      <li id="step1" class="on"><b>1</b>Chọn xe</li>
+      <li id="step2"><b>2</b>Chỉnh cách phanh</li>
+      <li id="step3"><b>3</b>Xem và tải</li>
+    </ol>
+    <div class="spacer"></div>
+    <span id="quality" class="chip warn tech" hidden></span>
+    <span class="tech"><span data-help-for="quality"></span></span>
+    <span id="provenance" class="chip tech"></span><span class="tech"><span data-help-for="provenance"></span></span>
+    <div class="seg" role="group" aria-label="Chế độ">
+      <button data-mode="simple" class="on">Đơn giản</button>
+      <button data-mode="tech">Kỹ thuật</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div class="canvas-wrap">
+      <canvas id="viewer"></canvas>
+      <div id="viewer3d" class="viewer3d" hidden></div>
+      <div class="overlays tech" role="group" aria-label="Lớp phủ">
+        <button class="chip on" data-overlay="ghosts">Bóng bản ghi</button>
+        <button class="chip on" data-overlay="leaders">Xe phía trước</button>
+        <button class="chip on" data-overlay="gap">Khoảng cách, TTC</button>
+        <button class="chip" data-overlay="labels">Mã xe</button>
+        <button class="chip" data-overlay="path">Dải đường đi</button>
+        <button class="chip on" data-overlay="stoplines">Vạch dừng</button>
+        <button class="chip" data-overlay="baseline">Quỹ đạo tóm gọn thô</button>
+        <button class="chip" data-overlay="measure">Đo khoảng cách</button>
+      </div>
+      <div class="view-toggle" role="group" aria-label="Góc nhìn">
+        <button data-view="top" class="on">Từ trên xuống</button>
+        <button data-view="free">3D</button>
+      </div>
+      <div id="banner" class="banner" hidden></div>
+      <div class="legend-box">
+        <span><i class="sw ego"></i>xe của bạn<span data-help-for="ego"></span></span>
+        <span><i class="sw pick"></i>xe có thể cho phanh<span data-help-for="pick"></span></span>
+        <span><i class="sw actor"></i>xe phanh</span>
+        <span><i class="sw reacted"></i>xe phản ứng</span>
+        <span><i class="sw ghost"></i>vị trí trong bản ghi</span>
+      </div>
+      <div id="hint" class="hint"></div>
+    </div>
+    <div class="timeline">
+      <button id="play" class="icon" aria-label="Phát">▶</button>
+      <button id="step-back" class="icon tech" aria-label="Lùi 0,05 s" title="Lùi 0,05 s">−</button>
+      <button id="step-fwd" class="icon tech" aria-label="Tiến 0,05 s" title="Tiến 0,05 s">+</button>
+      <div class="track">
+        <canvas id="markers" aria-hidden="true"></canvas>
+        <input id="time" type="range" min="0" max="20" step="0.05" value="0" aria-label="Thời gian">
+      </div>
+      <span id="time-label" class="time-label">0,0 s</span>
+      <select id="speed" aria-label="Tốc độ phát">
+        <option value="0.25">0,25×</option><option value="0.5">0,5×</option>
+        <option value="1" selected>1×</option><option value="2">2×</option>
+      </select>
+      <label class="check tech"><input type="checkbox" id="follow"> Bám theo xe đang chọn</label>
+    </div>
+  </main>
+
+  <aside class="inspector">
+    <div class="tabs" role="tablist">
+      <button data-tab="create" class="on">Tạo tình huống</button>
+      <button data-tab="found">Ca hiếm tìm sẵn</button><span data-help-for="found"></span>
+    </div>
+
+    <section id="tab-create">
+      <div id="pick-help" class="callout">
+        <b>Bấm vào một xe có viền hồng</b><span data-help-for="pick"></span> trên khung xem. Đó là những xe đang có xe khác chạy phía sau,
+        nên khi nó phanh sẽ có phản ứng dây chuyền.
+        <div id="pick-list" class="pick-list"></div>
+      </div>
+
+      <div id="form" hidden>
+        <div class="form-head"><span>Xe phanh</span><b id="actor-name"></b><button id="change-actor" class="link">đổi xe</button></div>
+
+        <div class="simple">
+          <label class="lbl">Phanh lúc<span data-help-for="t0"></span></label>
+          <div class="row"><b id="t0-simple" class="big"></b><span class="muted small">kéo thanh thời gian để đổi</span></div>
+          <label class="lbl">Phanh mạnh cỡ nào<span data-help-for="strength"></span></label>
+          <div class="seg wide" id="strength">
+            <button data-decel="2">Nhẹ</button><button data-decel="4" class="on">Vừa</button><button data-decel="6">Gấp</button>
+          </div>
+          <label class="lbl">Rồi làm gì<span data-help-for="target"></span></label>
+          <div class="seg wide" id="target-simple">
+            <button data-target="stop" data-dwell="0" class="on">Dừng hẳn</button>
+            <button data-target="stop" data-dwell="3">Dừng 3 s</button>
+            <button data-target="half" data-dwell="0">Chậm lại</button>
+          </div>
+        </div>
+
+        <div class="tech">
+          <div class="grid2">
+            <label class="lbl">Bắt đầu phanh (s)<span data-help-for="t0"></span><input id="t0" type="number" step="0.05" min="0"></label>
+            <label class="lbl">Mức phanh (m/s²)<span data-help-for="decel"></span><input id="decel" type="number" step="0.5" min="0.5" max="8"></label>
+            <label class="lbl">Đích<span data-help-for="target"></span><select id="target"><option value="stop">dừng</option><option value="half">nửa tốc độ</option></select></label>
+            <label class="lbl">Thời gian dừng (s)<span data-help-for="dwell"></span><input id="dwell" type="number" step="0.5" min="0" max="10"></label>
+            <label class="lbl">Phản xạ người lái (s)<span data-help-for="reaction"></span><input id="reaction" type="number" step="0.1" min="0.3" max="3"></label>
+            <label class="lbl check-cell"><input id="react" type="checkbox" checked> Xe phía sau phản ứng<span data-help-for="react"></span></label>
+          </div>
+          <div class="muted small" id="decel-note"></div>
+          <button id="use-time" class="link">Lấy thời điểm đang xem trên thanh thời gian</button>
+          <div class="note warn"><b>Kích hoạt theo thời gian.</b><span data-help-for="trigger"></span> File xuất ra dùng quỹ đạo tính sẵn: nếu xe tự lái
+            của bạn chạy khác người lái mẫu, các xe khác không phản ứng lại.</div>
+        </div>
+
+        <button id="run" class="primary block">Tạo tình huống</button>
+      </div>
+
+      <div id="result" hidden>
+        <div id="verdict" class="verdict"></div>
+        <dl id="result-kv" class="kv tech"></dl>
+        <div class="row gap">
+          <button id="replay" class="block">▶ Phát lại</button>
+          <button id="export" class="block">Tải gói kịch bản</button><span data-help-for="package"></span>
+        </div>
+        <div id="export-status" class="muted small"></div>
+        <div class="tech">
+          <button id="sensitivity" class="link">Thử độ nhạy: phản xạ 0,7 / 1,0 / 1,5 s</button><span data-help-for="sensitivity"></span>
+          <div id="sensitivity-out"></div>
+          <h3>Người lái mẫu<span data-help-for="idm"></span></h3>
+          <dl id="drivers-kv" class="kv"></dl>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-found" hidden>
+      <div id="found"></div>
+    </section>
+
+    <section class="tech object-box">
+      <h3>Vật thể đang chọn</h3>
+      <div id="details" class="details muted">Bấm vào một vật thể trên khung xem.</div>
+    </section>
+  </aside>
+
+  <section class="dock tech" aria-label="Chi tiết kỹ thuật">
+    <div class="dock-tabs" role="tablist">
+      <button data-dock="chart" class="on">Biểu đồ</button>
+      <button data-dock="space">Không gian tham số</button>
+      <button data-dock="vehicles">Các xe</button>
+      <button data-dock="checks">Kiểm tra hợp lệ</button>
+      <button data-dock="esmini">Độ khớp esmini</button>
+      <button data-dock="data">Dữ liệu gốc</button>
+      <button data-dock="export">Xuất và truy vết</button>
+    </div>
+    <div id="dock-body" class="dock-body"></div>
+  </section>
+
+  <!-- Data: sources and processing (opened from the top bar) -->
+  <div id="data-dialog" class="dialog-backdrop" hidden>
+    <div class="dialog wide">
+      <div class="row spread"><h3>Dữ liệu</h3><button id="close-data" class="ghost" aria-label="Đóng">✕</button></div>
+      <div class="row">
+        <select id="data-source" aria-label="Nguồn dữ liệu"></select>
+        <button id="add-source">+ Thêm nguồn</button>
+        <button id="remove-source" title="Bỏ nguồn này khỏi danh sách (không xoá dữ liệu)">Gỡ</button>
+        <span class="spacer"></span>
+        <button id="process-all" class="primary">Xử lý cảnh chưa xử lý</button>
+      </div>
+      <div id="esmini-warning" class="note warn" hidden>Chưa tìm thấy esmini nên chưa xử lý được. Xem README, mục "Cài đặt".</div>
+      <p class="muted small">"Xử lý" một cảnh: đo sai số phát lại (chỉ số 1) và để tool tự thử mọi cách phanh trên lưới
+        cố định (chỉ số 2). Tạo tình huống của riêng bạn thì không cần xử lý trước.</p>
+      <ul id="scene-list" class="scene-list"></ul>
+    </div>
+  </div>
+
+  <!-- "Add a data source" dialog -->
+  <div id="dialog" class="dialog-backdrop" hidden>
+    <form id="source-form" class="dialog" autocomplete="off">
+      <h3>Thêm nguồn dữ liệu</h3>
+      <div class="tabs radio" role="tablist">
+        <label><input type="radio" name="kind" value="csv" checked> File CSV</label>
+        <label><input type="radio" name="kind" value="nuscenes"> Thư mục nuScenes</label>
+      </div>
+      <label class="field">Tên hiển thị <input name="label" placeholder="Dữ liệu công ty A"></label>
+      <div data-kind="csv">
+        <label class="field">File quỹ đạo (.csv)<input type="file" name="csv" accept=".csv,text/csv"></label>
+        <label class="field">File đường OpenDRIVE (tuỳ chọn, tên là &lt;cảnh&gt;.xodr)<input type="file" name="xodr" accept=".xodr" multiple></label>
+        <p class="muted small">Mỗi dòng là một vật thể tại một thời điểm. Xem
+          <a href="/static/examples/tracks-vi-du.csv" download>file mẫu</a> và tài liệu <code>docs/dinh-dang-csv.md</code>.</p>
+      </div>
+      <div data-kind="nuscenes" hidden>
+        <label class="field">Thư mục gốc nuScenes (chứa thư mục phiên bản và <code>maps/</code>)<input name="dataroot" placeholder="C:\data\nuscenes"></label>
+        <label class="field">Phiên bản<input name="version" value="v1.0-mini" list="versions">
+          <datalist id="versions"><option value="v1.0-mini"><option value="v1.0-trainval"><option value="v1.0-test"></datalist></label>
+      </div>
+      <pre id="form-error" class="form-error" hidden></pre>
+      <div class="row end">
+        <button type="button" id="cancel-source">Huỷ</button>
+        <button type="submit" class="primary">Thêm</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="status" class="toast" hidden></div>
+
+  <!-- three.js 0.170.0 (MIT), copied into static/vendor so the app works offline -->
+  <script type="importmap">
+    { "imports": { "three": "/static/vendor/three.module.min.js", "three/addons/": "/static/vendor/" } }
+  </script>
+  <script type="module" src="/static/js/main.js"></script>
+</body>
+</html>

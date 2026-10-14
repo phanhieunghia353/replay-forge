@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+out/
+data/
+tools/
+# local notes for coding assistants, not published
+AGENTS.md
+CLAUDE.md
