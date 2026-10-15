@@ -102,6 +102,10 @@ tools\esmini-demo\bin\esmini.exe --window 60 60 1280 720 --ground_plane on --tra
 | App cho người dùng (chế độ đơn giản và kỹ thuật): tự tạo tình huống, kết luận bằng lời thường, kiểm lại bằng esmini và tải gói kịch bản; biểu đồ, không gian tham số, kiểm tra hợp lệ chi tiết, truy vết | xong (14/10/2026), có test cho máy chủ; đã thử trên trình duyệt |
 | Tạo biến thể bằng tay trong app, xuất bộ kịch bản | chưa làm |
 
+## Sử dụng có trách nhiệm
+
+Công cụ này dùng để kiểm thử phần mềm lái xe trong mô phỏng. Không được dùng để dàn dựng va chạm hoặc tai nạn thật, tấn công xe đang vận hành, làm giả bằng chứng an toàn, hay cài mã ẩn vào hệ thống khác. Các trợ lý AI làm việc trong repo tuân theo [AI_USE_POLICY.md](AI_USE_POLICY.md).
+
 ## Hệ toạ độ và quy ước
 
 - **nuScenes:** trục x hướng đông, y hướng bắc, đơn vị mét. Gốc là vị trí xe ghi hình ở khung đầu; thời gian 0 là khung đầu. Điểm vị trí của xe ghi hình là tâm cầu sau (tâm hộp lệch lên trước 1,39 m); của vật thể khác là tâm hộp.

@@ -168,6 +168,12 @@ docs/                design and metric definitions (Vietnamese)
 Docs: [metrics and assumptions](docs/gia-dinh-va-chi-so.md) · [behaviour design](docs/thiet-ke-kich-ban-hanh-vi.md)
 · [UI design](docs/thiet-ke-giao-dien.md) · [architecture](docs/kien-truc.md) · [CSV format](docs/dinh-dang-csv.md)
 
+## Responsible use
+
+This tool exists to test driving software in simulation. It must not be used to plan real-world
+collisions or staged accidents, attack deployed vehicles, falsify safety evidence, or hide code in
+another system. AI assistants working in this repository follow [AI_USE_POLICY.md](AI_USE_POLICY.md).
+
 ## Credits
 
 - [nuScenes](https://www.nuscenes.org/) by Motional: data and map expansion (not redistributed here).

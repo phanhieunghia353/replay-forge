@@ -5,6 +5,7 @@ __pycache__/
 out/
 data/
 tools/
-# local notes for coding assistants, not published
-AGENTS.md
-CLAUDE.md
+# personal notes for coding assistants, not published
+# (AGENTS.md, CLAUDE.md etc. are tracked: they carry AI_USE_POLICY.md)
+CLAUDE.local.md
+AGENTS.local.md
